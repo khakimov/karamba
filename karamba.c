@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <curl/curl.h>
 #include "queue.h"
 
 const char karamba_usage_string[] =
@@ -85,7 +86,8 @@ Queue queue_add(struct Config *k)
       }  
       printf("%s", buffer);
       dir_ptr = malloc((int) strlen(buffer) + 1);
-      strcpy(dir_ptr, buffer);
+      strncpy(dir_ptr, buffer, strlen(buffer) - 1);
+      // strcpy(dir_ptr, buffer);
       Enqueue(dir_ptr, Q);
     }
     printf("Current position in the file : %ld\n", ftell(fp));
@@ -101,11 +103,34 @@ Queue queue_add(struct Config *k)
 void scan(Queue Q, struct Config *k)
 {
   char *dir_ptr;
+  char *url;
+  // long http_code;
+
+  // CURL *curl;
+  // CURLcode response;
+
+  // init curl and set 301 follow
+  // curl = curl_easy_init();
+  // curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION,1);
+
+
   printf("Print all 10 elements...\n");
   while (!IsEmpty(Q)) {
     dir_ptr = Front(Q);
-    if(dir_ptr != NULL)
-      printf("%s/%s", k->target_url, dir_ptr);
+    if(dir_ptr != NULL) {
+      // url = malloc(strlen(k->target_url) + strlen(dir_ptr) + sizeof(char) * 2);
+      // strcat(url, k->target_url);
+      // strcat(url, "/");
+      // strcat(url, dir_ptr);
+      // strcat(url, "/");
+
+      // printf("%s\n", url);
+      // free(url);
+      // url = "http://google.com/";
+      // curl_easy_setopt(curl, CURLOPT_URL,url);
+      // response = curl_easy_perform(curl);
+      // curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
+    }
     Dequeue(Q);
     free(dir_ptr);
   }
@@ -124,6 +149,7 @@ int main(int argc, char const *argv[])
     printf("usage: %s\n", karamba_usage_string);
     return 1;
   }
+  
   Queue Q;
 
   while(karamba_conf->position >= 0)
