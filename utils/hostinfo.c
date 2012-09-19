@@ -18,10 +18,23 @@ int main(int argc, char **argv)
    }
 
    if(inet_aton(argv[1], &addr) != 0)
+   {
       hostp = gethostbyaddr((const char *)&addr, sizeof(addr), AF_INET);
+      if(hostp == NULL)
+      {
+         fprintf(stderr, "error: not found %s\n", inet_ntoa(addr));
+         exit(0);
+      }
+   }
    else
+   {
       hostp = gethostbyname(argv[1]);
-
+      if(hostp == NULL)
+      {
+         fprintf(stderr, "error: couldn't resolve %s\n", argv[1]);
+         exit(0);
+      }
+   }
    printf("official hostname: %s\n", hostp->h_name);
 
    for(pp = hostp->h_aliases; *pp != NULL; pp++)
