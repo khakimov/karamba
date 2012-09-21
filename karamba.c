@@ -15,6 +15,14 @@ struct Config {
   long int position;
 };
 
+#define RIO_BUFSIZE 8192
+typedef struct {
+   int rio_fd;
+   int rio_cnt;
+   char *rio_bufptr;
+   char rio_buf[RIO_BUFSIZE];
+} rio_t;
+
 static int handle_options(const char ***argv, int *argc, struct Config *k)
 {  
   while (*argc > 0) {
@@ -39,7 +47,7 @@ static int handle_options(const char ***argv, int *argc, struct Config *k)
     if(!strncmp(cmd, "http://", 7))
     {
       const char *target = cmd;
-      k->target_url = (char *) cmd;
+      k->target_url = (char *) cmd+7;
     }
 
     (*argc)--;
@@ -103,46 +111,61 @@ Queue queue_add(struct Config *k)
 void scan(Queue Q, struct Config *k)
 {
   char *dir_ptr;
-  char *url;
-  long http_code;
-
-  CURL *curl;
-  CURLcode response;
-
-  // init curl and set 301 follow
-  curl = curl_easy_init();
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION,1);
-
 
   while (!IsEmpty(Q)) {
     dir_ptr = Front(Q);
+
     if(dir_ptr != NULL) {
-      // BUG: 10 why is 2 reason of segment fault. 
-      // FIX: malloc
       // ADD: Threads
-      url = malloc(strlen(k->target_url) + strlen(dir_ptr) + 10); 
-      strcat(url, k->target_url);
-      strcat(url, "/");
-      strcat(url, dir_ptr);
-      strcat(url, "/");
+      int header = get_header(k->target_url, dir_ptr);
 
-      printf("%s\n", url);
-      curl_easy_setopt(curl, CURLOPT_URL,url);
-      response = curl_easy_perform(curl);
-      curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
-      
-      if (http_code == 200 || http_code == 403) {
-        printf("FOUND %s (response code %ld)\n", url, http_code);
-        printf("%s (HTTP code %ld)\n", url,http_code);
-      }  
-
-      free(url);
     }
+
     Dequeue(Q);
     free(dir_ptr);
   }
-  curl_easy_cleanup(curl);
 }
+
+void save_url(char *hostname, char *folder)
+{
+  FILE *fd;
+  fd = fopen("/tmp/scan.txt", "a+");
+  fprintf (fd, "%s/%s\n", hostname, folder);
+  fclose(fd);
+}
+
+int get_header(char *hostname, char *url)
+{
+  int clientfd, port, i;
+  char buf[4096];
+  rio_t rio;
+  // TODO: as a parameter
+  port = 80;
+
+  clientfd = open_clientfd(hostname, port);
+  rio_readinitb(&rio, clientfd);
+  printf("Connect to %s/%s\n", hostname,url);
+  
+  char *cmd;
+  cmd = malloc(28 + strlen(url) + strlen(hostname));
+  sprintf(cmd, "HEAD /%s/ HTTP/1.1\nHost: %s\n\n", url, hostname);
+  write(clientfd, cmd, strlen(cmd));
+  free(cmd);
+  // FIX: bad style. infinity loop!
+  while(1)
+  {
+    i = rio_readlineb(&rio, buf, 4096);
+    if (i <= 2)
+      break;
+    if((strncmp(buf+9, "200", 3)) == 0 || (strncmp(buf+9, "403", 3)) == 0)
+      save_url(hostname, url);
+    printf("%s\n", buf);
+  }
+  close(clientfd);
+  return 0;
+}
+
+
 
 int main(int argc, char const *argv[])
 {
