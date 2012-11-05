@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <curl/curl.h>
 
 #define BSIZE 200
 
