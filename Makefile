@@ -1,7 +1,7 @@
-SOURCES=karamba.c queue.c
-OBJECTS=karamba.o queue.o
+SOURCES=bon.c socket.c
+OBJECTS=bon.o socket.o
 OPTIONS=-g -Wall -Werror -O0 -std=c99
-LINK_FLAGS=-lm -lcurl
+LINK_FLAGS=-lm 
 TARGET=karamba
 CC=gcc
 
