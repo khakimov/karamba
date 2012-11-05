@@ -1,7 +1,7 @@
 SOURCES=bon.c socket.c
 OBJECTS=bon.o socket.o
 OPTIONS=-g -Wall -Werror -O0 -std=c99
-LINK_FLAGS=-lm 
+LINK_FLAGS=-lm -lpthread
 TARGET=karamba
 CC=gcc
 
