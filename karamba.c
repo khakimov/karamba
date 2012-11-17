@@ -16,7 +16,7 @@
 #define F_READING             2
 #define F_DONE                4
 
-#define     GET_CMD           "GET /%s HTTP/1.0\r\nHost: fb.com\r\n\r\n"
+#define     GET_CMD           "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n"
 
 struct file {
       int f_flags;
@@ -30,7 +30,7 @@ fd_set      rset, wset;
 char *hostname = "fb.com";
 
 
-static inline void loadBar(int x, int n, int r, int w)
+void loadBar(int x, int n, int r, int w)
 {
     // Only update r times.
     if ( x % (n/r) != 0 ) return;
@@ -124,13 +124,17 @@ void write_get_command(struct file *p)
 {
       int n;
       char line[1024];
-      n = snprintf(line, sizeof(line), GET_CMD, p->f_name);
-   write(p->f_fd, line, n);
-   debug_printf("write GET");
-   p->f_flags = F_READING;
-   FD_SET(p->f_fd, &rset);
-   if(p->f_fd > maxfd)
-      maxfd = p->f_fd;
+      n = snprintf(line, sizeof(line), GET_CMD, p->f_name, hostname);
+      write(p->f_fd, line, n);
+      
+      debug_printf("write GET");
+      
+      p->f_flags = F_READING;
+      
+      FD_SET(p->f_fd, &rset);
+      
+      if(p->f_fd > maxfd)
+            maxfd = p->f_fd;
 }
 
 
