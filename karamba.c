@@ -16,7 +16,7 @@
 #define F_READING             2
 #define F_DONE                4
 
-#define     GET_CMD           "GET /%s HTTP/1.0\r\nHost: localhost\r\n\r\n"
+#define     GET_CMD           "GET /%s HTTP/1.0\r\nHost: fb.com\r\n\r\n"
 
 struct file {
       int f_flags;
@@ -27,17 +27,8 @@ struct file {
 
 int         nconn, nfiles, nlefttoconn, nlefttoread, maxfd;
 fd_set      rset, wset;
-char hostname[] = "localhost";
+char *hostname = "fb.com";
 
-ssize_t
-Read(int fd, void *ptr, size_t nbytes)
-{
-      ssize_t           n;
-
-      if ( (n = read(fd, ptr, nbytes)) == -1)
-            fprintf(stderr, "read error\n");
-      return(n);
-}
 
 static inline void loadBar(int x, int n, int r, int w)
 {
@@ -122,10 +113,7 @@ struct file *init_pool()
             bufptr = malloc(sizeof(char) * chars);
             memcpy(bufptr, buf, chars);
             p[i].f_flags = 0;
-            p[i].status = 0;
-
             p[i++].f_name = bufptr;
-            // fprintf(stderr, "[%d] f_flags %d, f_name %s\n", i, p[i-1].f_flags, p[i-1].f_name);
       }
       FD_ZERO(&rset);
       FD_ZERO(&wset);
@@ -207,20 +195,30 @@ int parse_answer(char *buf)
       } else if (strncmp(buf+9, "403", 3) == 0) {
             return 403;
       } else if (strncmp(buf+9, "301", 3) == 0) { 
-            printf("%s", buf+9);
+            //printf("%s", buf+9);
             return 301;
       }
       return -1;
 }
 
+int getTarget(char *p)
+{     
+      int n;
+      if((n = strncmp(p, "http://", 7)) == 0) {
+            hostname = p + 7;
+            return 1;
+      }
+      else
+            return 0;
+}
+
 int main(int argc, char **argv)
 {
-      
-      if(argc < 3) {
+      printf("%s\n", argv[1]);
+      if(argc < 3 || !getTarget(argv[1])) {
             fprintf(stderr, "usage: %s http://host.com <#conn>\n", argv[0]);
             exit(0);
       }
-
       int maxconn, i, fd, flags, error, n, status, total;
       fd_set rs, ws;
       char buf[1024];
@@ -266,14 +264,11 @@ int main(int argc, char **argv)
                         FD_CLR(fd, &wset);
                         write_get_command(&files[i]);
                   } else if (flags & F_READING && FD_ISSET(fd, &rs)) {
-                        if((n = Read(fd, buf, sizeof(buf))) == 0) {
+                        if((n = read(fd, buf, sizeof(buf))) > 0) {
                               close(fd);
                               files[i].f_flags = F_DONE;
                               status = parse_answer(buf);
-                              if(status != 0){
-                                  fprintf(stderr, "\n[%d] Server response %d\n", i, status);
-                                    files[i].status = status;
-                              }
+                              files[i].status = status;
                               FD_CLR(fd, &rset);
                               nconn--;
                               nlefttoread--;
@@ -286,15 +281,13 @@ int main(int argc, char **argv)
             fflush(stdout);
             printf("\r");
       }
+      printf("\n");
 
       for(i = 0; i < nfiles; i++) {
-            // if (!(i % 100))
-                  // printf("\n%d\n", i);
-            if(files[i].status != 0) {
-                  fprintf(stderr, "\n[%d][nfiles %d] Found %s with response code %d", 
-                                    i, nfiles, files[i].f_name, files[i].status);
+            if(files[i].status == 200 || files[i].status == 403) {
+                  fprintf(stderr, "[%d] Found %s with response code %d\n",
+                                     i, files[i].f_name, files[i].status);
             }
       }
-      // printf("\n[%d] found %s and status %d\n", 865, files[865].f_name, files[865].status);
       return 0;
 }
